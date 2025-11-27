@@ -306,26 +306,30 @@ else:
                     valor_por_classificacao.columns = ['Classificacao', 'Valor']
                     valor_por_classificacao_sorted = valor_por_classificacao.sort_values('Valor', ascending=True)
                     
+                    # Adiciona uma coluna formatada para o tooltip
+                    valor_por_classificacao_sorted['Valor_Formatado_BR'] = valor_por_classificacao_sorted['Valor'].apply(formatar_moeda_br)
+
                     fig = px.bar(
                         valor_por_classificacao_sorted,
                         x='Valor',
                         y='Classificacao',
                         orientation='h',
-                        title='Valor por Classificação'
+                        title='Valor por Classificação',
+                        hover_data={'Valor_Formatado_BR': True} # Adiciona o valor formatado ao tooltip
                     )
                     
                     fig.update_traces(
                         text=valor_por_classificacao_sorted['Valor'].apply(formatar_moeda_br),
                         textposition='outside',
-                        textfont=dict(color='black', size=12),
+                        textfont=dict(color='black', size=14), # Aumentado de 12 para 14
                         marker_color='#27ae60'
                     )
                     
                     fig.update_layout(
                         xaxis_title='Valor (R$)',
                         yaxis_title='Classificação',
-                        height=400,
-                        margin=dict(l=180, r=120, t=50, b=50),
+                        height=500, # Aumentado de 400 para 500
+                        margin=dict(l=200, r=150, t=50, b=50), # Margens aumentadas de l=180, r=120 para l=200, r=150
                         showlegend=False
                     )
                     
