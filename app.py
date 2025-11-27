@@ -262,7 +262,7 @@ with st.spinner('Carregando dados...'):
             resumo_display['Recebido'] = resumo_display['Recebido'].apply(formatar_moeda_br)
             resumo_display['Previsao'] = resumo_display['Previsao'].apply(formatar_moeda_br)
             resumo_display['A_Receber'] = resumo_display['A_Receber'].apply(formatar_moeda_br)
-            st.dataframe(resumo_display.rename(columns={'NOME': 'Responsável', 'Mesas': 'Mesas Dist.', 'Recebido': 'Total Recebido'}), use_container_width=True)
+            st.dataframe(resumo_display.rename(columns={'NOME': 'Responsável', 'Mesas': 'Mesas Dist.', 'Recebido': 'Total Recebido'}), use_container_width=True, hide_index=True)
         
         with tab3:
             st.header('Análise de Patrocínios')
@@ -281,7 +281,8 @@ with st.spinner('Carregando dados...'):
                 st.subheader('📋 Lista de Patrocínios')
                 st.dataframe(
                     patron_display[['ORD', 'MESA', 'NOME', 'Cliente', 'VALOR_CALCULADO']].rename(columns={'VALOR_CALCULADO': 'Valor Patrocínio'}),
-                    use_container_width=True
+                    use_container_width=True,
+                    hide_index=True
                 )
                 
                 patron_extra = df_patron[df_patron['VALOR_CALCULADO'] > 1000]
@@ -295,7 +296,8 @@ with st.spinner('Carregando dados...'):
                     
                     st.dataframe(
                         patron_extra_display[['ORD', 'MESA', 'NOME', 'Cliente', 'VALOR_CALCULADO', 'Valor Extra']].rename(columns={'VALOR_CALCULADO': 'Valor Total'}),
-                        use_container_width=True
+                        use_container_width=True,
+                        hide_index=True
                     )
             else:
                 st.info('❌ Nenhum patrocínio encontrado com os filtros aplicados.')
@@ -303,6 +305,7 @@ with st.spinner('Carregando dados...'):
         with tab4:
             st.header('Dados Brutos')
             df_display = df_filtrado[['ORD', 'NOME', 'Cliente', 'MESA', 'VALOR_CALCULADO', 'CLASSIFICACAO', 'DATA_REC']].copy()
+            df_display = df_display.reset_index(drop=True)
             df_display['MESA'] = df_display['MESA'].apply(lambda x: str(int(x)) if x != -1 else '-')
             df_display['VALOR_CALCULADO'] = df_display['VALOR_CALCULADO'].apply(formatar_moeda_br)
             df_display = df_display.rename(columns={
@@ -310,7 +313,8 @@ with st.spinner('Carregando dados...'):
                 'CLASSIFICACAO': 'CLASSE',
                 'DATA_REC': 'DATA'
             })
-            st.dataframe(df_display, use_container_width=True)
+            
+            st.dataframe(df_display[['ORD', 'NOME', 'Cliente', 'MESA', 'VALOR', 'CLASSE', 'DATA']], use_container_width=True, hide_index=True)
             
             st.markdown('---')
             st.subheader('Opções de Download')
