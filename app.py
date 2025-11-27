@@ -17,12 +17,80 @@ warnings.filterwarnings('ignore')
 GOOGLE_SHEETS_ID = '1bKyxuaOkGHKkVx2e5gdYISMi7zckmyjy'
 SHEET_NAME = 'Mesas'
 
+# ========== CREDENCIAIS DE LOGIN ==========
+USUARIOS_PERMITIDOS = {
+    'baile': 'baile2025',  # usuario: baile, senha: baile2025
+    'jorge': 'jorge123',    # usuario: jorge, senha: jorge123
+    'admin': 'admin2025'    # usuario: admin, senha: admin2025
+}
+
 st.set_page_config(
     page_title='Dashboard Baile 2025',
     page_icon='📊',
     layout='wide',
     initial_sidebar_state='expanded'
 )
+
+def verificar_senha(usuario, senha):
+    """Verifica se o usuário e senha estão corretos"""
+    return usuario in USUARIOS_PERMITIDOS and USUARIOS_PERMITIDOS[usuario] == senha
+
+def tela_login():
+    """Exibe a tela de login"""
+    col1, col2, col3 = st.columns([1, 2, 1])
+    
+    with col2:
+        st.markdown("<h1 style='text-align: center; color: #2c3e50;'>🎭 BAILE 2025</h1>", unsafe_allow_html=True)
+        st.markdown("<h3 style='text-align: center; color: #7f8c8d;'>Dashboard de Controle</h3>", unsafe_allow_html=True)
+        
+        st.markdown("---")
+        
+        st.write("")
+        st.write("")
+        
+        usuario = st.text_input("👤 Usuário:", placeholder="Digite seu usuário")
+        senha = st.text_input("🔐 Senha:", type="password", placeholder="Digite sua senha")
+        
+        st.write("")
+        
+        col_btn1, col_btn2 = st.columns(2)
+        
+        with col_btn1:
+            if st.button("🔓 Entrar", use_container_width=True):
+                if usuario and senha:
+                    if verificar_senha(usuario, senha):
+                        st.session_state.autenticado = True
+                        st.session_state.usuario_atual = usuario
+                        st.success(f"✅ Bem-vindo, {usuario}!")
+                        st.rerun()
+                    else:
+                        st.error("❌ Usuário ou senha incorretos!")
+                else:
+                    st.warning("⚠️ Digite usuário e senha!")
+        
+        with col_btn2:
+            if st.button("ℹ️ Ver Credenciais", use_container_width=True):
+                st.info("""
+                **Credenciais de Teste:**
+                
+                👤 Usuário: **baile**
+                🔐 Senha: **baile2025**
+                
+                ---
+                
+                👤 Usuário: **jorge**
+                🔐 Senha: **jorge123**
+                
+                ---
+                
+                👤 Usuário: **admin**
+                🔐 Senha: **admin2025**
+                """)
+        
+        st.write("")
+        st.write("")
+        st.markdown("---")
+        st.markdown("<p style='text-align: center; color: #95a5a6; font-size: 12px;'>Dashboard Baile 2025 v4.3 - Protegido por Senha</p>", unsafe_allow_html=True)
 
 def formatar_moeda_br(valor):
     if pd.isna(valor):
@@ -143,188 +211,204 @@ def gerar_pdf_relatorio(df_filtrado, resumo_exec):
         elements.append(Paragraph('Nenhum dado encontrado.', styles['Normal']))
     elements.append(Spacer(1, 0.3*inch))
     footer_style = ParagraphStyle('Footer', parent=styles['Normal'], fontSize=9, textColor=colors.HexColor('#999999'), alignment=TA_CENTER)
-    elements.append(Paragraph('Relatório gerado automaticamente - Dashboard Baile 2025 v4.2', footer_style))
+    elements.append(Paragraph('Relatório gerado automaticamente - Dashboard Baile 2025 v4.3', footer_style))
     doc.build(elements)
     buffer.seek(0)
     return buffer
 
-with st.spinner('Carregando dados...'):
-    resultado = carregar_e_processar_dados()
-    if resultado[0] is None:
-        st.error('Não foi possível carregar os dados.')
-    else:
-        df_limpo, TOTAL_ATUALMENTE_ESPERADO, ord_faltantes, df_patrocinios, total_patrocinios, valor_patrocinios_total, valor_patrocinios_extra, mesas_pagas, total_mesas_pagas, meia_entrada, total_meia_entrada, mesas_pendentes_com_dados, total_mesas_pendentes, total_recebido, previsao, saldo_a_receber, resumo_responsavel, resumo_responsavel_display = resultado
-        
-        if 'classificacao_selecionada' not in st.session_state:
-            st.session_state.classificacao_selecionada = df_limpo['CLASSIFICACAO'].unique().tolist()
-        if 'responsavel_selecionado' not in st.session_state:
-            st.session_state.responsavel_selecionado = 'Todos'
-        if 'valor_range' not in st.session_state:
-            st.session_state.valor_range = (float(df_limpo['VALOR_CALCULADO'].min()), float(df_limpo['VALOR_CALCULADO'].max()))
-        
-        st.sidebar.header('Filtros')
-        if st.sidebar.button('Resetar Filtros'):
-            st.session_state.clear()
-            st.rerun()
-        
-        todas_classificacoes = df_limpo['CLASSIFICACAO'].unique().tolist()
-        classificacao_selecionada = st.sidebar.multiselect('Filtrar por Classificação:', options=todas_classificacoes, default=st.session_state.classificacao_selecionada, key='classificacao_multiselect')
-        st.session_state.classificacao_selecionada = classificacao_selecionada
-        
-        todos_responsaveis = ['Todos'] + sorted(df_limpo['NOME'].unique().tolist())
-        responsavel_selecionado = st.sidebar.selectbox('Filtrar por Responsável:', options=todos_responsaveis, index=todos_responsaveis.index(st.session_state.responsavel_selecionado) if st.session_state.responsavel_selecionado in todos_responsaveis else 0, key='responsavel_selectbox')
-        st.session_state.responsavel_selecionado = responsavel_selecionado
-        
-        min_valor_df = float(df_limpo['VALOR_CALCULADO'].min())
-        max_valor_df = float(df_limpo['VALOR_CALCULADO'].max())
-        valor_range = st.sidebar.slider('Filtrar por Faixa de Valor (R$):', min_value=min_valor_df, max_value=max_valor_df, value=st.session_state.valor_range, step=50.0, format='R$ %.2f', key='valor_slider')
-        st.session_state.valor_range = valor_range
-        
-        df_filtrado = df_limpo[df_limpo['CLASSIFICACAO'].isin(classificacao_selecionada)]
-        if responsavel_selecionado != 'Todos':
-            df_filtrado = df_filtrado[df_filtrado['NOME'] == responsavel_selecionado]
-        df_filtrado = df_filtrado[(df_filtrado['VALOR_CALCULADO'] >= valor_range[0]) & (df_filtrado['VALOR_CALCULADO'] <= valor_range[1])]
-        
-        total_recebido_filtrado = df_filtrado[df_filtrado['VALOR_CALCULADO'] > 0]['VALOR_CALCULADO'].sum()
-        total_patrocinios_filtrado = len(df_filtrado[df_filtrado['CLASSIFICACAO'] == 'PATROCÍNIO'])
-        previsao_filtrada = (len(df_filtrado) * 600) + (total_patrocinios_filtrado * 400)
-        saldo_a_receber_filtrado = previsao_filtrada - total_recebido_filtrado
-        percentual_recebido_filtrado = (total_recebido_filtrado / previsao_filtrada * 100) if previsao_filtrada > 0 else 0
-        
-        st.title('📊 Dashboard Baile 2025')
-        st.markdown(f'Última atualização: {datetime.now().strftime("%d/%m/%Y %H:%M:%S")}')
-        
-        col1, col2, col3, col4 = st.columns(4)
-        with col1:
-            st.metric(label='Total Recebido', value=formatar_moeda_br(total_recebido_filtrado))
-        with col2:
-            st.metric(label='Previsão', value=formatar_moeda_br(previsao_filtrada))
-        with col3:
-            st.metric(label='Saldo a Receber', value=formatar_moeda_br(saldo_a_receber_filtrado))
-        with col4:
-            st.metric(label='Percentual', value=f'{percentual_recebido_filtrado:.1f}%')
-        
-        st.markdown('---')
-        
-        tab1, tab2, tab3, tab4 = st.tabs(['🎯 Visão Geral', '👤 Responsáveis', '🏆 Patrocínios', '📋 Dados Brutos'])
-        
-        with tab1:
-            st.header('Visão Geral')
-            col_chart1, col_chart2 = st.columns(2)
-            with col_chart1:
-                classificacao_counts = df_filtrado['CLASSIFICACAO'].value_counts().reset_index()
-                classificacao_counts.columns = ['Classificacao', 'Contagem']
-                fig = px.pie(classificacao_counts, values='Contagem', names='Classificacao', title='Distribuição por Classificação', hole=0.3)
-                st.plotly_chart(fig, use_container_width=True)
-            with col_chart2:
-                valor_por_classificacao = df_filtrado.groupby('CLASSIFICACAO')['VALOR_CALCULADO'].sum().reset_index()
-                valor_por_classificacao.columns = ['Classificacao', 'Valor']
-                fig = px.bar(valor_por_classificacao.sort_values('Valor', ascending=True), x='Valor', y='Classificacao', orientation='h', title='Valor por Classificação')
-                st.plotly_chart(fig, use_container_width=True)
+# ========== VERIFICAR AUTENTICAÇÃO ==========
+if 'autenticado' not in st.session_state:
+    st.session_state.autenticado = False
+
+if not st.session_state.autenticado:
+    tela_login()
+else:
+    # ========== DASHBOARD PRINCIPAL ==========
+    with st.spinner('Carregando dados...'):
+        resultado = carregar_e_processar_dados()
+        if resultado[0] is None:
+            st.error('Não foi possível carregar os dados.')
+        else:
+            df_limpo, TOTAL_ATUALMENTE_ESPERADO, ord_faltantes, df_patrocinios, total_patrocinios, valor_patrocinios_total, valor_patrocinios_extra, mesas_pagas, total_mesas_pagas, meia_entrada, total_meia_entrada, mesas_pendentes_com_dados, total_mesas_pendentes, total_recebido, previsao, saldo_a_receber, resumo_responsavel, resumo_responsavel_display = resultado
             
-            top_responsaveis = df_filtrado.groupby('NOME')['VALOR_CALCULADO'].sum().nlargest(10).reset_index()
-            top_responsaveis.columns = ['Responsavel', 'Valor']
-            top_responsaveis_sorted = top_responsaveis.sort_values('Valor', ascending=True)
+            if 'classificacao_selecionada' not in st.session_state:
+                st.session_state.classificacao_selecionada = df_limpo['CLASSIFICACAO'].unique().tolist()
+            if 'responsavel_selecionado' not in st.session_state:
+                st.session_state.responsavel_selecionado = 'Todos'
+            if 'valor_range' not in st.session_state:
+                st.session_state.valor_range = (float(df_limpo['VALOR_CALCULADO'].min()), float(df_limpo['VALOR_CALCULADO'].max()))
             
-            fig = px.bar(
-                top_responsaveis_sorted, 
-                x='Valor', 
-                y='Responsavel', 
-                orientation='h', 
-                title='Top 10 Responsáveis por Valor Recebido'
-            )
+            # ========== SIDEBAR ==========
+            st.sidebar.header('Filtros')
+            col_logout, col_reset = st.sidebar.columns(2)
+            with col_logout:
+                if st.button('🚪 Sair'):
+                    st.session_state.autenticado = False
+                    st.session_state.usuario_atual = None
+                    st.rerun()
+            with col_reset:
+                if st.button('Resetar Filtros'):
+                    st.session_state.clear()
+                    st.rerun()
             
-            fig.update_traces(
-                text=top_responsaveis_sorted['Valor'].apply(formatar_moeda_br),
-                textposition='outside',
-                marker_color='#3498db'
-            )
+            todas_classificacoes = df_limpo['CLASSIFICACAO'].unique().tolist()
+            classificacao_selecionada = st.sidebar.multiselect('Filtrar por Classificação:', options=todas_classificacoes, default=st.session_state.classificacao_selecionada, key='classificacao_multiselect')
+            st.session_state.classificacao_selecionada = classificacao_selecionada
             
-            fig.update_layout(
-                xaxis_title='Valor (R$)',
-                yaxis_title='Responsável',
-                showlegend=False,
-                height=500
-            )
+            todos_responsaveis = ['Todos'] + sorted(df_limpo['NOME'].unique().tolist())
+            responsavel_selecionado = st.sidebar.selectbox('Filtrar por Responsável:', options=todos_responsaveis, index=todos_responsaveis.index(st.session_state.responsavel_selecionado) if st.session_state.responsavel_selecionado in todos_responsaveis else 0, key='responsavel_selectbox')
+            st.session_state.responsavel_selecionado = responsavel_selecionado
             
-            st.plotly_chart(fig, use_container_width=True)
-        
-        with tab2:
-            st.header('Detalhes por Responsável')
-            resumo_filtrado = df_filtrado.groupby('NOME').agg(Mesas=('ORD', 'count'), Recebido=('VALOR_CALCULADO', 'sum')).reset_index()
-            patrocinios_filtrado = df_filtrado[df_filtrado['CLASSIFICACAO'] == 'PATROCÍNIO'].groupby('NOME').size().reset_index(name='Patrocinios')
-            resumo_filtrado = pd.merge(resumo_filtrado, patrocinios_filtrado, on='NOME', how='left').fillna(0)
-            resumo_filtrado['Patrocinios'] = resumo_filtrado['Patrocinios'].astype(int)
-            resumo_filtrado['Previsao'] = (resumo_filtrado['Mesas'] * 600) + (resumo_filtrado['Patrocinios'] * 400)
-            resumo_filtrado['A_Receber'] = resumo_filtrado['Previsao'] - resumo_filtrado['Recebido']
-            resumo_filtrado = resumo_filtrado.sort_values('Mesas', ascending=False)
-            resumo_display = resumo_filtrado.copy()
-            resumo_display['Recebido'] = resumo_display['Recebido'].apply(formatar_moeda_br)
-            resumo_display['Previsao'] = resumo_display['Previsao'].apply(formatar_moeda_br)
-            resumo_display['A_Receber'] = resumo_display['A_Receber'].apply(formatar_moeda_br)
-            st.dataframe(resumo_display.rename(columns={'NOME': 'Responsável', 'Mesas': 'Mesas Dist.', 'Recebido': 'Total Recebido'}), use_container_width=True, hide_index=True)
-        
-        with tab3:
-            st.header('Análise de Patrocínios')
+            min_valor_df = float(df_limpo['VALOR_CALCULADO'].min())
+            max_valor_df = float(df_limpo['VALOR_CALCULADO'].max())
+            valor_range = st.sidebar.slider('Filtrar por Faixa de Valor (R$):', min_value=min_valor_df, max_value=max_valor_df, value=st.session_state.valor_range, step=50.0, format='R$ %.2f', key='valor_slider')
+            st.session_state.valor_range = valor_range
             
-            df_patron = df_filtrado[df_filtrado['VALOR_CALCULADO'] >= 1000].copy()
+            df_filtrado = df_limpo[df_limpo['CLASSIFICACAO'].isin(classificacao_selecionada)]
+            if responsavel_selecionado != 'Todos':
+                df_filtrado = df_filtrado[df_filtrado['NOME'] == responsavel_selecionado]
+            df_filtrado = df_filtrado[(df_filtrado['VALOR_CALCULADO'] >= valor_range[0]) & (df_filtrado['VALOR_CALCULADO'] <= valor_range[1])]
             
-            st.write(f'**Total de Patrocínios (VALOR >= 1000):** {len(df_patron)}')
+            total_recebido_filtrado = df_filtrado[df_filtrado['VALOR_CALCULADO'] > 0]['VALOR_CALCULADO'].sum()
+            total_patrocinios_filtrado = len(df_filtrado[df_filtrado['CLASSIFICACAO'] == 'PATROCÍNIO'])
+            previsao_filtrada = (len(df_filtrado) * 600) + (total_patrocinios_filtrado * 400)
+            saldo_a_receber_filtrado = previsao_filtrada - total_recebido_filtrado
+            percentual_recebido_filtrado = (total_recebido_filtrado / previsao_filtrada * 100) if previsao_filtrada > 0 else 0
             
-            if len(df_patron) > 0:
-                st.write(f'**Valor Total em Patrocínios:** {formatar_moeda_br(df_patron["VALOR_CALCULADO"].sum())}')
+            st.title('📊 Dashboard Baile 2025')
+            st.markdown(f'👤 Logado como: **{st.session_state.usuario_atual}** | Última atualização: {datetime.now().strftime("%d/%m/%Y %H:%M:%S")}')
+            
+            col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                st.metric(label='Total Recebido', value=formatar_moeda_br(total_recebido_filtrado))
+            with col2:
+                st.metric(label='Previsão', value=formatar_moeda_br(previsao_filtrada))
+            with col3:
+                st.metric(label='Saldo a Receber', value=formatar_moeda_br(saldo_a_receber_filtrado))
+            with col4:
+                st.metric(label='Percentual', value=f'{percentual_recebido_filtrado:.1f}%')
+            
+            st.markdown('---')
+            
+            tab1, tab2, tab3, tab4 = st.tabs(['🎯 Visão Geral', '👤 Responsáveis', '🏆 Patrocínios', '📋 Dados Brutos'])
+            
+            with tab1:
+                st.header('Visão Geral')
+                col_chart1, col_chart2 = st.columns(2)
+                with col_chart1:
+                    classificacao_counts = df_filtrado['CLASSIFICACAO'].value_counts().reset_index()
+                    classificacao_counts.columns = ['Classificacao', 'Contagem']
+                    fig = px.pie(classificacao_counts, values='Contagem', names='Classificacao', title='Distribuição por Classificação', hole=0.3)
+                    st.plotly_chart(fig, use_container_width=True)
+                with col_chart2:
+                    valor_por_classificacao = df_filtrado.groupby('CLASSIFICACAO')['VALOR_CALCULADO'].sum().reset_index()
+                    valor_por_classificacao.columns = ['Classificacao', 'Valor']
+                    fig = px.bar(valor_por_classificacao.sort_values('Valor', ascending=True), x='Valor', y='Classificacao', orientation='h', title='Valor por Classificação')
+                    st.plotly_chart(fig, use_container_width=True)
                 
-                patron_display = df_patron.copy()
-                patron_display['MESA'] = patron_display['MESA'].apply(lambda x: str(int(x)) if x != -1 else '-')
-                patron_display['VALOR_CALCULADO'] = patron_display['VALOR_CALCULADO'].apply(formatar_moeda_br)
+                top_responsaveis = df_filtrado.groupby('NOME')['VALOR_CALCULADO'].sum().nlargest(10).reset_index()
+                top_responsaveis.columns = ['Responsavel', 'Valor']
+                top_responsaveis_sorted = top_responsaveis.sort_values('Valor', ascending=True)
                 
-                st.subheader('📋 Lista de Patrocínios')
-                st.dataframe(
-                    patron_display[['ORD', 'MESA', 'NOME', 'Cliente', 'VALOR_CALCULADO']].rename(columns={'VALOR_CALCULADO': 'Valor Patrocínio'}),
-                    use_container_width=True,
-                    hide_index=True
+                fig = px.bar(
+                    top_responsaveis_sorted, 
+                    x='Valor', 
+                    y='Responsavel', 
+                    orientation='h', 
+                    title='Top 10 Responsáveis por Valor Recebido'
                 )
                 
-                patron_extra = df_patron[df_patron['VALOR_CALCULADO'] > 1000]
-                if len(patron_extra) > 0:
-                    st.subheader('🎁 Patrocínios com Valor Extra (Acima de R$ 1.000)')
-                    patron_extra_display = patron_extra.copy()
-                    patron_extra_display['Valor Extra'] = patron_extra_display['VALOR_CALCULADO'] - 1000
-                    patron_extra_display['MESA'] = patron_extra_display['MESA'].apply(lambda x: str(int(x)) if x != -1 else '-')
-                    patron_extra_display['VALOR_CALCULADO'] = patron_extra_display['VALOR_CALCULADO'].apply(formatar_moeda_br)
-                    patron_extra_display['Valor Extra'] = patron_extra_display['Valor Extra'].apply(formatar_moeda_br)
+                fig.update_traces(
+                    text=top_responsaveis_sorted['Valor'].apply(formatar_moeda_br),
+                    textposition='outside',
+                    marker_color='#3498db'
+                )
+                
+                fig.update_layout(
+                    xaxis_title='Valor (R$)',
+                    yaxis_title='Responsável',
+                    showlegend=False,
+                    height=500
+                )
+                
+                st.plotly_chart(fig, use_container_width=True)
+            
+            with tab2:
+                st.header('Detalhes por Responsável')
+                resumo_filtrado = df_filtrado.groupby('NOME').agg(Mesas=('ORD', 'count'), Recebido=('VALOR_CALCULADO', 'sum')).reset_index()
+                patrocinios_filtrado = df_filtrado[df_filtrado['CLASSIFICACAO'] == 'PATROCÍNIO'].groupby('NOME').size().reset_index(name='Patrocinios')
+                resumo_filtrado = pd.merge(resumo_filtrado, patrocinios_filtrado, on='NOME', how='left').fillna(0)
+                resumo_filtrado['Patrocinios'] = resumo_filtrado['Patrocinios'].astype(int)
+                resumo_filtrado['Previsao'] = (resumo_filtrado['Mesas'] * 600) + (resumo_filtrado['Patrocinios'] * 400)
+                resumo_filtrado['A_Receber'] = resumo_filtrado['Previsao'] - resumo_filtrado['Recebido']
+                resumo_filtrado = resumo_filtrado.sort_values('Mesas', ascending=False)
+                resumo_display = resumo_filtrado.copy()
+                resumo_display['Recebido'] = resumo_display['Recebido'].apply(formatar_moeda_br)
+                resumo_display['Previsao'] = resumo_display['Previsao'].apply(formatar_moeda_br)
+                resumo_display['A_Receber'] = resumo_display['A_Receber'].apply(formatar_moeda_br)
+                st.dataframe(resumo_display.rename(columns={'NOME': 'Responsável', 'Mesas': 'Mesas Dist.', 'Recebido': 'Total Recebido'}), use_container_width=True, hide_index=True)
+            
+            with tab3:
+                st.header('Análise de Patrocínios')
+                
+                df_patron = df_filtrado[df_filtrado['VALOR_CALCULADO'] >= 1000].copy()
+                
+                st.write(f'**Total de Patrocínios (VALOR >= 1000):** {len(df_patron)}')
+                
+                if len(df_patron) > 0:
+                    st.write(f'**Valor Total em Patrocínios:** {formatar_moeda_br(df_patron["VALOR_CALCULADO"].sum())}')
                     
+                    patron_display = df_patron.copy()
+                    patron_display['MESA'] = patron_display['MESA'].apply(lambda x: str(int(x)) if x != -1 else '-')
+                    patron_display['VALOR_CALCULADO'] = patron_display['VALOR_CALCULADO'].apply(formatar_moeda_br)
+                    
+                    st.subheader('📋 Lista de Patrocínios')
                     st.dataframe(
-                        patron_extra_display[['ORD', 'MESA', 'NOME', 'Cliente', 'VALOR_CALCULADO', 'Valor Extra']].rename(columns={'VALOR_CALCULADO': 'Valor Total'}),
+                        patron_display[['ORD', 'MESA', 'NOME', 'Cliente', 'VALOR_CALCULADO']].rename(columns={'VALOR_CALCULADO': 'Valor Patrocínio'}),
                         use_container_width=True,
                         hide_index=True
                     )
-            else:
-                st.info('❌ Nenhum patrocínio encontrado com os filtros aplicados.')
-        
-        with tab4:
-            st.header('Dados Brutos')
-            df_display = df_filtrado[['ORD', 'NOME', 'Cliente', 'MESA', 'VALOR_CALCULADO', 'CLASSIFICACAO', 'DATA_REC']].copy()
-            df_display = df_display.reset_index(drop=True)
-            df_display['MESA'] = df_display['MESA'].apply(lambda x: str(int(x)) if x != -1 else '-')
-            df_display['VALOR_CALCULADO'] = df_display['VALOR_CALCULADO'].apply(formatar_moeda_br)
-            df_display = df_display.rename(columns={
-                'VALOR_CALCULADO': 'VALOR',
-                'CLASSIFICACAO': 'CLASSE',
-                'DATA_REC': 'DATA'
-            })
+                    
+                    patron_extra = df_patron[df_patron['VALOR_CALCULADO'] > 1000]
+                    if len(patron_extra) > 0:
+                        st.subheader('🎁 Patrocínios com Valor Extra (Acima de R$ 1.000)')
+                        patron_extra_display = patron_extra.copy()
+                        patron_extra_display['Valor Extra'] = patron_extra_display['VALOR_CALCULADO'] - 1000
+                        patron_extra_display['MESA'] = patron_extra_display['MESA'].apply(lambda x: str(int(x)) if x != -1 else '-')
+                        patron_extra_display['VALOR_CALCULADO'] = patron_extra_display['VALOR_CALCULADO'].apply(formatar_moeda_br)
+                        patron_extra_display['Valor Extra'] = patron_extra_display['Valor Extra'].apply(formatar_moeda_br)
+                        
+                        st.dataframe(
+                            patron_extra_display[['ORD', 'MESA', 'NOME', 'Cliente', 'VALOR_CALCULADO', 'Valor Extra']].rename(columns={'VALOR_CALCULADO': 'Valor Total'}),
+                            use_container_width=True,
+                            hide_index=True
+                        )
+                else:
+                    st.info('❌ Nenhum patrocínio encontrado com os filtros aplicados.')
             
-            st.dataframe(df_display[['ORD', 'NOME', 'Cliente', 'MESA', 'VALOR', 'CLASSE', 'DATA']], use_container_width=True, hide_index=True)
-            
-            st.markdown('---')
-            st.subheader('Opções de Download')
-            
-            csv_data = df_filtrado.to_csv(index=False, encoding='utf-8-sig')
-            st.download_button(label='📥 Baixar CSV', data=csv_data, file_name=f'baile_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv', mime='text/csv')
-            
-            resumo_pdf = pd.DataFrame({'Métrica': ['Mesas', 'Pagas', 'Patrocínios', 'Total Recebido', 'Previsão', 'Saldo', 'Percentual'], 'Valor': [f'{len(df_filtrado)}', f'{len(df_filtrado[df_filtrado["CLASSIFICACAO"] == "MESA PAGA"])}', f'{total_patrocinios_filtrado}', formatar_moeda_br(total_recebido_filtrado), formatar_moeda_br(previsao_filtrada), formatar_moeda_br(saldo_a_receber_filtrado), f'{percentual_recebido_filtrado:.1f}%']})
-            pdf_buffer = gerar_pdf_relatorio(df_filtrado, resumo_pdf)
-            st.download_button(label='📄 Baixar PDF', data=pdf_buffer, file_name=f'baile_{datetime.now().strftime("%Y%m%d_%H%M%S")}.pdf', mime='application/pdf')
-
-st.sidebar.markdown('---')
-st.sidebar.info('Dashboard Baile 2025 v4.2')
+            with tab4:
+                st.header('Dados Brutos')
+                df_display = df_filtrado[['ORD', 'NOME', 'Cliente', 'MESA', 'VALOR_CALCULADO', 'CLASSIFICACAO', 'DATA_REC']].copy()
+                df_display = df_display.reset_index(drop=True)
+                df_display['MESA'] = df_display['MESA'].apply(lambda x: str(int(x)) if x != -1 else '-')
+                df_display['VALOR_CALCULADO'] = df_display['VALOR_CALCULADO'].apply(formatar_moeda_br)
+                df_display = df_display.rename(columns={
+                    'VALOR_CALCULADO': 'VALOR',
+                    'CLASSIFICACAO': 'CLASSE',
+                    'DATA_REC': 'DATA'
+                })
+                
+                st.dataframe(df_display[['ORD', 'NOME', 'Cliente', 'MESA', 'VALOR', 'CLASSE', 'DATA']], use_container_width=True, hide_index=True)
+                
+                st.markdown('---')
+                st.subheader('Opções de Download')
+                
+                csv_data = df_filtrado.to_csv(index=False, encoding='utf-8-sig')
+                st.download_button(label='📥 Baixar CSV', data=csv_data, file_name=f'baile_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv', mime='text/csv')
+                
+                resumo_pdf = pd.DataFrame({'Métrica': ['Mesas', 'Pagas', 'Patrocínios', 'Total Recebido', 'Previsão', 'Saldo', 'Percentual'], 'Valor': [f'{len(df_filtrado)}', f'{len(df_filtrado[df_filtrado["CLASSIFICACAO"] == "MESA PAGA"])}', f'{total_patrocinios_filtrado}', formatar_moeda_br(total_recebido_filtrado), formatar_moeda_br(previsao_filtrada), formatar_moeda_br(saldo_a_receber_filtrado), f'{percentual_recebido_filtrado:.1f}%']})
+                pdf_buffer = gerar_pdf_relatorio(df_filtrado, resumo_pdf)
+                st.download_button(label='📄 Baixar PDF', data=pdf_buffer, file_name=f'baile_{datetime.now().strftime("%Y%m%d_%H%M%S")}.pdf', mime='application/pdf')
+    
+    st.sidebar.markdown('---')
+    st.sidebar.info(f'Dashboard Baile 2025 v4.3\n\n👤 Usuário: {st.session_state.usuario_atual}')
