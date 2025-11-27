@@ -61,11 +61,11 @@ def classificar_mesa(row):
     else:
         return 'OUTRO'
 
-@st.cache_data(show_spinner=False)
 def carregar_e_processar_dados():
     """
     Carrega os dados da planilha do Google Sheets, limpa e processa-os.
     Retorna o DataFrame processado e métricas importantes.
+    NÃO POSSUI CACHE - ATUALIZA SEMPRE!
     """
     try:
         url = f'https://docs.google.com/spreadsheets/d/{GOOGLE_SHEETS_ID}/export?format=xlsx'
