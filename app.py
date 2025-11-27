@@ -94,8 +94,8 @@ def tela_login():
 
 def formatar_moeda_br(valor):
     if pd.isna(valor):
-        return 'R$ 0,00'
-    return f'R$ {valor:,.2f}'.replace(',', 'X').replace('.', ',').replace('X', '.')
+        return '`R$ 0,00`'
+    return f'`R$ {valor:,.2f}`'.replace(',', 'X').replace('.', ',').replace('X', '.')
 
 def classificar_mesa(row):
     valor = row['VALOR']
@@ -306,31 +306,35 @@ else:
                     valor_por_classificacao.columns = ['Classificacao', 'Valor']
                     valor_por_classificacao_sorted = valor_por_classificacao.sort_values('Valor', ascending=True)
                     
-                    # Adiciona uma coluna formatada para o tooltip
-                    valor_por_classificacao_sorted['Valor_Formatado_BR'] = valor_por_classificacao_sorted['Valor'].apply(formatar_moeda_br)
-
+                    # ⭐ CRIA COLUNA COM VALORES FORMATADOS EM R$
+                    valor_por_classificacao_sorted['Valor_Formatado'] = valor_por_classificacao_sorted['Valor'].apply(
+                        lambda x: f'`R$ {x:,.2f}`'.replace(',', 'X').replace('.', ',').replace('X', '.')
+                    )
+                    
                     fig = px.bar(
                         valor_por_classificacao_sorted,
                         x='Valor',
                         y='Classificacao',
                         orientation='h',
-                        title='Valor por Classificação',
-                        hover_data={'Valor_Formatado_BR': True} # Adiciona o valor formatado ao tooltip
+                        title='Valor por Classificação'
                     )
                     
+                    # ⭐ MOSTRA O VALOR FORMATADO EM R$ NO TEXTO DA BARRA
                     fig.update_traces(
-                        text=valor_por_classificacao_sorted['Valor'].apply(formatar_moeda_br),
+                        text=valor_por_classificacao_sorted['Valor_Formatado'],
                         textposition='outside',
-                        textfont=dict(color='black', size=14), # Aumentado de 12 para 14
+                        textfont=dict(color='black', size=14),
                         marker_color='#27ae60'
                     )
                     
+                    # ⭐ AUMENTA MARGENS E ALTURA PARA NÃO CORTAR O TEXTO
                     fig.update_layout(
                         xaxis_title='Valor (R$)',
                         yaxis_title='Classificação',
-                        height=500, # Aumentado de 400 para 500
-                        margin=dict(l=200, r=150, t=50, b=50), # Margens aumentadas de l=180, r=120 para l=200, r=150
-                        showlegend=False
+                        height=600,  # AUMENTADO de 400 para 600
+                        margin=dict(l=180, r=350, t=50, b=50),  # AUMENTADO r de 120 para 350
+                        showlegend=False,
+                        font=dict(size=12)
                     )
                     
                     st.plotly_chart(fig, use_container_width=True)
@@ -338,6 +342,11 @@ else:
                 top_responsaveis = df_filtrado.groupby('NOME')['VALOR_CALCULADO'].sum().nlargest(10).reset_index()
                 top_responsaveis.columns = ['Responsavel', 'Valor']
                 top_responsaveis_sorted = top_responsaveis.sort_values('Valor', ascending=True)
+                
+                # ⭐ CRIA COLUNA COM VALORES FORMATADOS EM R$
+                top_responsaveis_sorted['Valor_Formatado'] = top_responsaveis_sorted['Valor'].apply(
+                    lambda x: f'`R$ {x:,.2f}`'.replace(',', 'X').replace('.', ',').replace('X', '.')
+                )
                 
                 fig = px.bar(
                     top_responsaveis_sorted, 
@@ -347,9 +356,11 @@ else:
                     title='Top 10 Responsáveis por Valor Recebido'
                 )
                 
+                # ⭐ MOSTRA O VALOR FORMATADO EM R$ NO TEXTO DA BARRA
                 fig.update_traces(
-                    text=top_responsaveis_sorted['Valor'].apply(formatar_moeda_br),
+                    text=top_responsaveis_sorted['Valor_Formatado'],
                     textposition='outside',
+                    textfont=dict(color='black', size=13),
                     marker_color='#3498db'
                 )
                 
@@ -357,7 +368,9 @@ else:
                     xaxis_title='Valor (R$)',
                     yaxis_title='Responsável',
                     showlegend=False,
-                    height=500
+                    height=600,  # AUMENTADO de 500 para 600
+                    margin=dict(l=180, r=300, t=50, b=50),  # AUMENTADO r para 300
+                    font=dict(size=12)
                 )
                 
                 st.plotly_chart(fig, use_container_width=True)
@@ -400,7 +413,7 @@ else:
                     
                     patron_extra = df_patron[df_patron['VALOR_CALCULADO'] > 1000]
                     if len(patron_extra) > 0:
-                        st.subheader('🎁 Patrocínios com Valor Extra (Acima de R$ 1.000)')
+                        st.subheader('🎁 Patrocínios com Valor Extra (Acima de `R$ 1.000`)')
                         patron_extra_display = patron_extra.copy()
                         patron_extra_display['Valor Extra'] = patron_extra_display['VALOR_CALCULADO'] - 1000
                         patron_extra_display['MESA'] = patron_extra_display['MESA'].apply(lambda x: str(int(x)) if x != -1 else '-')
